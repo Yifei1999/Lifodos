@@ -1,0 +1,8 @@
+# pycharm IDEA local index
+.idea/
+__pycache__/
+
+.venv/
+
+# history log
+logger/history/
