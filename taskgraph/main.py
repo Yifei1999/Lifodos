@@ -1,6 +1,5 @@
 import networkx as nx
 from typing import Annotated
-from typing_extensions import TypedDict
 import asyncio
 from datetime import datetime
 from typing import (
@@ -14,7 +13,10 @@ from typing import (
     Union,
 )
 from logger import mylogger
-
+try:
+    from .state import State
+except ImportError as e:
+    from state import State
 
 def logging(func: Callable):
     async def wrapper(*args, **kwargs):
@@ -32,9 +34,6 @@ def logging(func: Callable):
         return result
     return wrapper
 
-
-class State(TypedDict):
-    pass
 
 async def START(state: State):
     pass
@@ -54,8 +53,20 @@ class TaskGraph(nx.DiGraph):
         self.add_node(START, "START")
         self.add_node(END, "END")
 
-    def add_node(self, func: Callable, task_name: str = None, **kwargs):
-        super().add_node(task_name)
+    def add_node(self, func: Callable, task_name: str = None, trigger_type = "NECESSARY", **kwargs):
+        """
+           add an new task node to the graph
+
+           :param func: the function call of the task.
+           :param task_name:
+           :param trigger_type: define when to activate the task, can be following values:
+               - 'NECESSARY': all the precursor must be finished until the task is activated (default setting).
+               - 'SUFFICIENT': once one of the precursor is finished, the task will be activated.
+           :param kwargs: user defined task attributes.
+
+           :return:
+       """
+        super().add_node(task_name, trigger_type = trigger_type, **kwargs)
 
         # register the task function with task name
         self.registered_task[task_name] = func
@@ -104,7 +115,6 @@ class TaskGraph(nx.DiGraph):
 
                 task_result = task.result()
                 all_node_view[task_name]["status"] = "FINISHED"
-                # mylogger.info(f"task {task_name} has been finished!")
 
                 if task_name == "END":
                     finish_flag = True
@@ -122,18 +132,29 @@ class TaskGraph(nx.DiGraph):
             new_task_id_list = []
             for node in all_node_view:
                 node_attr = all_node_view[node]
+                trigger_type = node_attr["trigger_type"]
 
                 if node_attr["status"] == "PENDING":
                     task_in_edge = super().in_edges(node, data=True)
 
-                    activate_flag = True
-                    for edge in task_in_edge:
-                        precursor_name, _, attr_dict = edge
-                        precursor_attr = all_node_view[precursor_name]
-                        if precursor_attr["status"] != "FINISHED":
-                            activate_flag = False
-                            break
-
+                    if trigger_type == "NECESSARY":
+                        activate_flag = True
+                        # check if all the precursor task are finished
+                        for edge in task_in_edge:
+                            precursor_name, _, attr_dict = edge
+                            precursor_attr = all_node_view[precursor_name]
+                            if precursor_attr["status"] != "FINISHED":
+                                activate_flag = False
+                                break
+                    else:
+                        activate_flag = False
+                        # check if one of the precursor task is finished
+                        for edge in task_in_edge:
+                            precursor_name, _, attr_dict = edge
+                            precursor_attr = all_node_view[precursor_name]
+                            if precursor_attr["status"] == "FINISHED":
+                                activate_flag = True
+                                break
 
                     # add new task to the task pool
                     if activate_flag:
@@ -141,7 +162,6 @@ class TaskGraph(nx.DiGraph):
 
                         # merge state result from different edges
                         # 这里需要确定是否被执行
-                        # mylogger.info(f"task {node} has been started...")
 
                         initial_state = State()
                         start_task = asyncio.create_task(task_function_call(initial_state))
@@ -166,14 +186,18 @@ async def wait2(state: State):
     await asyncio.sleep(3)
 
 
-
 if __name__ == "__main__":
     graph = TaskGraph(State)
-    graph.add_node(wait1, "wait11")
-    graph.add_node(wait2, "wait22")
+    graph.add_node(wait1, "wait11", trigger_type="SUFFICIENT")
+    graph.add_node(wait2, "wait22", trigger_type="SUFFICIENT")
+    graph.add_node(wait2, "wait33", trigger_type="SUFFICIENT")
     graph.add_edge("START", "wait11")
-    graph.add_edge("wait11", "wait22")
-    graph.add_edge("wait22", "END")
+    graph.add_edge("START", "wait22")
+
+    graph.add_edge("wait11", "wait33")
+    graph.add_edge("wait22", "wait33")
+
+    graph.add_edge("wait33", "END")
     graph.compile()
 
 
