@@ -11,12 +11,19 @@ from typing import (
     Sequence,
     Type,
     Union,
+    Annotated
 )
+
 from logger import mylogger
 try:
-    from .state import State
+    from .state import State, merge
 except ImportError as e:
-    from state import State
+    from state import State, merge
+
+# TODO: optional activate of a new node when its precursor is finished
+# TODO: overtime execution of a task node
+# TODO: support annotated field feature in `status`
+# TODO： support flexible tasks function return value, eg: field missing
 
 def logging(func: Callable):
     async def wrapper(*args, **kwargs):
@@ -50,21 +57,22 @@ class TaskGraph(nx.DiGraph):
             "START": START,
             "END": END
         }
+        self.result_status = {}
         self.add_node(START, "START")
         self.add_node(END, "END")
 
     def add_node(self, func: Callable, task_name: str = None, trigger_type = "NECESSARY", **kwargs):
         """
-           add an new task node to the graph
+        add an new task node to the graph
 
-           :param func: the function call of the task.
-           :param task_name:
-           :param trigger_type: define when to activate the task, can be following values:
-               - 'NECESSARY': all the precursor must be finished until the task is activated (default setting).
-               - 'SUFFICIENT': once one of the precursor is finished, the task will be activated.
-           :param kwargs: user defined task attributes.
+        :param func: the function call of the task.
+        :param task_name:
+        :param trigger_type: define when to activate the task, can be following values:
+           - 'NECESSARY': all the precursor must be finished until the task is activated (default setting).
+           - 'SUFFICIENT': once one of the precursor is finished, the task will be activated.
+       :param kwargs: user defined task attributes.
 
-           :return:
+       :return:
        """
         super().add_node(task_name, trigger_type = trigger_type, **kwargs)
 
@@ -87,9 +95,8 @@ class TaskGraph(nx.DiGraph):
         all_node_view = super().nodes()
 
         # fetch task, gather and merge the results
-        initial_state = State()
+        initial_state = initial_state or {}
         task_function_call = self.registered_task["START"]
-
         start_task = asyncio.create_task(task_function_call(initial_state))
         mylogger.info("task graph has been started at the START node")
 
@@ -114,6 +121,7 @@ class TaskGraph(nx.DiGraph):
                 task_name = run_task_id_list[index]
 
                 task_result = task.result()
+                self.result_status[task_name] = task_result
                 all_node_view[task_name]["status"] = "FINISHED"
 
                 if task_name == "END":
@@ -137,6 +145,7 @@ class TaskGraph(nx.DiGraph):
                 if node_attr["status"] == "PENDING":
                     task_in_edge = super().in_edges(node, data=True)
 
+                    colleted_Status = []
                     if trigger_type == "NECESSARY":
                         activate_flag = True
                         # check if all the precursor task are finished
@@ -146,6 +155,8 @@ class TaskGraph(nx.DiGraph):
                             if precursor_attr["status"] != "FINISHED":
                                 activate_flag = False
                                 break
+                            else:
+                                colleted_Status.append(self.result_status[precursor_name])
                     else:
                         activate_flag = False
                         # check if one of the precursor task is finished
@@ -154,6 +165,7 @@ class TaskGraph(nx.DiGraph):
                             precursor_attr = all_node_view[precursor_name]
                             if precursor_attr["status"] == "FINISHED":
                                 activate_flag = True
+                                colleted_Status.append(self.result_status[precursor_name])
                                 break
 
                     # add new task to the task pool
@@ -161,10 +173,16 @@ class TaskGraph(nx.DiGraph):
                         task_function_call = self.registered_task[node]
 
                         # merge state result from different edges
-                        # 这里需要确定是否被执行
+                        # TODO: 这里需要确定是否被执行
+                        if len(colleted_Status) == 1:
+                            input_state = colleted_Status[0]
+                        else:
+                            input_state = colleted_Status[0]
+                            for i in range(len(colleted_Status) - 1):
+                                input_state = merge(input_state, colleted_Status[i+1])
 
-                        initial_state = State()
-                        start_task = asyncio.create_task(task_function_call(initial_state))
+                        input_state = State()
+                        start_task = asyncio.create_task(task_function_call(input_state))
 
                         new_task_list += [start_task]
                         new_task_id_list += [node]
