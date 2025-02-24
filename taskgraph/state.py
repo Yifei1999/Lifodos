@@ -1,3 +1,4 @@
+from openpyxl.styles.builtins import total
 from typing_extensions import TypedDict
 from typing import get_type_hints
 from typing import (
@@ -18,12 +19,16 @@ class StatusConflictError(Exception):
         self.message = message
 
 
-class State(TypedDict):
+class State(TypedDict, total=False):
     """
-        define the state metadata
-        it is not encouraged to pass a lot of parameter that only use once in 'paras'
+    define the state metadata
+
+    these variables are pre-defined:
+     - `downstream_disable`: the model whose name is in will not be activated when the current task is finished.
+     - `paras`: it is not encouraged to pass a lot of parameter that only use once in 'paras'.
     """
-    downstream_disable: Optional[Iterable[str]]
+    downstream_disables: Optional[Iterable[str]]
+    paras: Optional[Any]
 
 
 def merge(state1: State, state2: State) -> State:
@@ -33,8 +38,15 @@ def merge(state1: State, state2: State) -> State:
     :param state2:
     :return:
     """
+    state1 = state1 or {}
+    state2 = state2 or {}
     new_state = {}
     for key in state1:
+        if key == "downstream_disables":
+            new_state[key] = state1[key] + state2[key]
+        if key == "paras":
+            new_state[key] = state1[key].update(state2[key])
+
         new_state[key] = state1[key] or state2[key]
 
     return new_state

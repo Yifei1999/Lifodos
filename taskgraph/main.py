@@ -127,7 +127,8 @@ class TaskGraph(nx.DiGraph):
             # record the task result and pop out of the running list
             task_name = run_task_list[index][0]
             task = next(iter(done))
-            task_result = task.result()
+            task_result = task.result() or {}
+
             # record result
             self.result_status[task_name] = task_result
             all_node_view[task_name]["status"] = "FINISHED"
@@ -149,12 +150,16 @@ class TaskGraph(nx.DiGraph):
             successor_name_list = [each[1] for each in task_out_edge]
 
             for node_name in successor_name_list:
+                if ("downstream_disables" in task_result) and (node_name in task_result["downstream_disables"]):
+                    continue
+
                 node_attr = all_node_view[node_name]
                 trigger_type = node_attr["trigger_type"]
 
                 if node_attr["status"] in ("PENDING", "FINISHED"):
                     task_in_edge = super().in_edges(node_name, data=True)
 
+                    # collect the results of the precursor nodes
                     collected_status = []
                     if trigger_type == "NECESSARY":
                         activate_flag = True
@@ -183,7 +188,6 @@ class TaskGraph(nx.DiGraph):
                         task_function_call = self.registered_task[node_name]
 
                         # merge state result from different edges
-                        # TODO: 这里需要确定是否被执行
                         if len(collected_status) == 1:
                             input_state = collected_status[0]
                         else:
@@ -214,16 +218,12 @@ async def wait2(state: State):
 
 if __name__ == "__main__":
     graph = TaskGraph(State)
-    graph.add_node(wait1, "wait11", trigger_type="SUFFICIENT")
-    graph.add_node(wait2, "wait22", trigger_type="SUFFICIENT")
-    graph.add_node(wait2, "wait33", trigger_type="SUFFICIENT")
-    graph.add_edge("START", "wait11")
-    graph.add_edge("START", "wait22")
+    graph.add_node(wait1, "wait1", trigger_type="SUFFICIENT")
+    graph.add_node(wait2, "wait2", trigger_type="SUFFICIENT")
 
-    graph.add_edge("wait11", "wait33")
-    graph.add_edge("wait22", "wait33")
-
-    graph.add_edge("wait33", "END")
+    graph.add_edge("START", "wait1")
+    graph.add_edge("wait1", "wait2")
+    graph.add_edge("wait2", "wait1")
     graph.compile()
 
 
