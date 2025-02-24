@@ -124,31 +124,35 @@ class TaskGraph(nx.DiGraph):
                          raise Exception("multiple finished task")
 
             # task finished, update result and status
-            for task in done:
-                task_name = run_task_list[index][0]
-                task_result = task.result()
+            # record the task result and pop out of the running list
+            task_name = run_task_list[index][0]
+            task = next(iter(done))
+            task_result = task.result()
+            # record result
+            self.result_status[task_name] = task_result
+            all_node_view[task_name]["status"] = "FINISHED"
+            run_task_list.pop(index)
 
-                # record the task result and pop out of the running list
-                self.result_status[task_name] = task_result
-                all_node_view[task_name]["status"] = "FINISHED"
-                run_task_list.pop(index)
-
-                if task_name == "END":
-                    finish_flag = True
-                    break
+            if task_name == "END":
+                finish_flag = True
+                break
 
             # check the end task condition
             if finish_flag:
+                # reach the end of the task graph
                 mylogger.info("task graph has been finished at the END node")
                 break
 
             # fetch new task, gather and merge the results
             new_task_list = []
-            for node_name in all_node_view:
+            task_out_edge = super().out_edges(task_name, data=True)
+            successor_name_list = [each[1] for each in task_out_edge]
+
+            for node_name in successor_name_list:
                 node_attr = all_node_view[node_name]
                 trigger_type = node_attr["trigger_type"]
 
-                if node_attr["status"] == "PENDING":
+                if node_attr["status"] in ("PENDING", "FINISHED"):
                     task_in_edge = super().in_edges(node_name, data=True)
 
                     collected_status = []

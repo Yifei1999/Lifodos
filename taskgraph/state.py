@@ -4,6 +4,7 @@ from typing import (
     Any,
     Callable,
     Literal,
+    Iterable,
     NamedTuple,
     Optional,
     Sequence,
@@ -22,8 +23,8 @@ class State(TypedDict):
         define the state metadata
         it is not encouraged to pass a lot of parameter that only use once in 'paras'
     """
-    name: Optional[str]
-    class_name: Optional[str]
+    downstream_disable: Optional[Iterable[str]]
+
 
 def merge(state1: State, state2: State) -> State:
     """
@@ -39,21 +40,6 @@ def merge(state1: State, state2: State) -> State:
     return new_state
 
 
-
 if __name__ == "__main__":
-
-    def wait2(state: State):
-        print(state)
-
-
-    class State(TypedDict):
-        """
-            define the state metadata
-            it is not encouraged to pass a lot of parameter that only use once in 'paras'
-        """
-        name: Annotated[str, wait2]
-
-    state = State()
-    print(get_type_hints(State))
-    input_state = State()
+    pass
 
