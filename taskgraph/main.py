@@ -100,52 +100,58 @@ class TaskGraph(nx.DiGraph):
         start_task = asyncio.create_task(task_function_call(initial_state))
         mylogger.info("task graph has been started at the START node")
 
-        run_task_list = [start_task]
-        run_task_id_list = ["START"]
+        run_task_list = [("START", start_task)]
         finish_flag = False
 
         while len(run_task_list) > 0:
-            # await task completion
-            for task_id in run_task_id_list:
+            # activate the task, waiting any one of the task to finish
+            for each in run_task_list:
+                task_id = each[0]
                 all_node_view[task_id]["status"] = "RUNNING"
 
-            done, running = await asyncio.wait(fs=run_task_list, return_when=asyncio.FIRST_COMPLETED)
+            done, running = await asyncio.wait(
+                fs=[name_task_pair[1] for name_task_pair in run_task_list],
+                return_when=asyncio.FIRST_COMPLETED
+            )
 
+            # traverse and find the index of the finished task
             index = None
-            for i, each in enumerate(run_task_list):
-                 if each.done():
-                     index = i
+            for i, name_task_pair in enumerate(run_task_list):
+                 if name_task_pair[1].done():
+                     if index is None:
+                         index = i
+                     else:
+                         raise Exception("multiple finished task")
 
-            # task finish, update result and status
+            # task finished, update result and status
             for task in done:
-                task_name = run_task_id_list[index]
-
+                task_name = run_task_list[index][0]
                 task_result = task.result()
+
+                # record the task result and pop out of the running list
                 self.result_status[task_name] = task_result
                 all_node_view[task_name]["status"] = "FINISHED"
+                run_task_list.pop(index)
 
                 if task_name == "END":
                     finish_flag = True
                     break
 
-            run_task_id_list.pop(index)
-            run_task_list.pop(index)
-
+            # check the end task condition
             if finish_flag:
                 mylogger.info("task graph has been finished at the END node")
                 break
 
-            # fetch task, gather and merge the results
+            # fetch new task, gather and merge the results
             new_task_list = []
-            new_task_id_list = []
-            for node in all_node_view:
-                node_attr = all_node_view[node]
+            for node_name in all_node_view:
+                node_attr = all_node_view[node_name]
                 trigger_type = node_attr["trigger_type"]
 
                 if node_attr["status"] == "PENDING":
-                    task_in_edge = super().in_edges(node, data=True)
+                    task_in_edge = super().in_edges(node_name, data=True)
 
-                    colleted_Status = []
+                    collected_status = []
                     if trigger_type == "NECESSARY":
                         activate_flag = True
                         # check if all the precursor task are finished
@@ -156,7 +162,7 @@ class TaskGraph(nx.DiGraph):
                                 activate_flag = False
                                 break
                             else:
-                                colleted_Status.append(self.result_status[precursor_name])
+                                collected_status.append(self.result_status[precursor_name])
                     else:
                         activate_flag = False
                         # check if one of the precursor task is finished
@@ -165,30 +171,28 @@ class TaskGraph(nx.DiGraph):
                             precursor_attr = all_node_view[precursor_name]
                             if precursor_attr["status"] == "FINISHED":
                                 activate_flag = True
-                                colleted_Status.append(self.result_status[precursor_name])
+                                collected_status.append(self.result_status[precursor_name])
                                 break
 
                     # add new task to the task pool
                     if activate_flag:
-                        task_function_call = self.registered_task[node]
+                        task_function_call = self.registered_task[node_name]
 
                         # merge state result from different edges
                         # TODO: 这里需要确定是否被执行
-                        if len(colleted_Status) == 1:
-                            input_state = colleted_Status[0]
+                        if len(collected_status) == 1:
+                            input_state = collected_status[0]
                         else:
-                            input_state = colleted_Status[0]
-                            for i in range(len(colleted_Status) - 1):
-                                input_state = merge(input_state, colleted_Status[i+1])
+                            input_state = collected_status[0]
+                            for i in range(len(collected_status) - 1):
+                                input_state = merge(input_state, collected_status[i + 1])
 
                         input_state = State()
                         start_task = asyncio.create_task(task_function_call(input_state))
 
-                        new_task_list += [start_task]
-                        new_task_id_list += [node]
+                        new_task_list += [(node_name, start_task)]
 
-            run_task_list = list(running) + new_task_list
-            run_task_id_list += new_task_id_list
+            run_task_list += new_task_list
 
     def invoke(self):
         pass
