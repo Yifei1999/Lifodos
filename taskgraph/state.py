@@ -10,7 +10,8 @@ from typing import (
     Optional,
     Sequence,
     Type,
-    Union, Annotated,
+    Union,
+    Annotated
 )
 
 class StatusConflictError(Exception):

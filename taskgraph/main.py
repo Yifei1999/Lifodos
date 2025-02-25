@@ -20,7 +20,6 @@ try:
 except ImportError as e:
     from state import State, merge
 
-# TODO: optional activate of a new node when its precursor is finished
 # TODO: overtime execution of a task node
 # TODO: support annotated field feature in `status`
 # TODO： support flexible tasks function return value, eg: field missing
