@@ -20,9 +20,6 @@ try:
 except ImportError as e:
     from state import State, merge
 
-# TODO: overtime execution of a task node
-# TODO: support annotated field feature in `status`
-# TODO： support flexible tasks function return value, eg: field missing
 
 def logging(func: Callable):
     async def wrapper(*args, **kwargs):
