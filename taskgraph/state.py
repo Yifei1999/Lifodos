@@ -19,17 +19,13 @@ class StatusConflictError(Exception):
         self.message = message
 
 
-def add_message():
-    pass
-
-
 class State(TypedDict, total=False):
     """
     define the state metadata
 
     these variables are pre-defined:
      - `downstream_disable`: the model whose name is in will not be activated when the current task is finished.
-     - `paras`: it is not encouraged to pass a lot of parameter that only use once in 'paras'.
+     - `paras`: it is not encouraged to pass a lot of parameters that only use once, put them in 'paras' instead.
     """
     downstream_disables: Optional[Iterable[str]]
     paras: Optional[Any]
@@ -38,9 +34,15 @@ class State(TypedDict, total=False):
 def merge(state1: State, state2: State) -> State:
     """
     define status merging criteria
-    :param state1:
-    :param state2:
-    :return:
+    :param state1: returned state of task 1
+    :param state2: returned state of task 2
+    :return: merged status
+
+    merging rule:
+     - `downstream_disables`: combine the two set
+     - `paras`: update the `paras` from task 1 using `paras` from task 2
+     - others: 
+
     """
     # hints = get_type_hints(State, include_extras=True)
     # name_annotation = hints.get("messages")

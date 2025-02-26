@@ -14,6 +14,8 @@ from typing import (
     Annotated
 )
 
+from prompt_toolkit.key_binding.bindings.named_commands import clear_screen
+
 from logger import mylogger
 try:
     from .state import State, merge
@@ -49,13 +51,30 @@ class TaskGraph(nx.DiGraph):
         super().__init__()
 
         # dict: task name -> task function call
-        self.registered_task = {
+        self._registered_task = {
             "START": START,
             "END": END
         }
-        self.result_status = {}
+        self._result_status = {}
         self.add_node(START, "START")
         self.add_node(END, "END")
+
+    def print_instance_state(self):
+        all_node_view = super().nodes()
+        format_map = {
+            "FINISHED": "32",
+            "RUNNING": "33",
+            "PENDING": "37"
+        }
+
+        print("current task status:")
+
+        for task_id in self._registered_task:
+            status = all_node_view[task_id]["status"]
+
+            print(task_id + " " * (40 - len(task_id)), end="")
+            print(f'\033[{format_map[status]}m' +  status + '\033[0m')
+
 
     def add_node(self, func: Callable, task_name: str = None, trigger_type = "NECESSARY", **kwargs):
         """
@@ -73,7 +92,7 @@ class TaskGraph(nx.DiGraph):
         super().add_node(task_name, trigger_type = trigger_type, **kwargs)
 
         # register the task function with task name
-        self.registered_task[task_name] = func
+        self._registered_task[task_name] = func
 
     def add_edge(self, task_name_u: str, task_name_v: str, **kwargs):
         super().add_edge(task_name_u, task_name_v, **kwargs)
@@ -92,7 +111,7 @@ class TaskGraph(nx.DiGraph):
 
         # fetch task, gather and merge the results
         initial_state = initial_state or {}
-        task_function_call = self.registered_task["START"]
+        task_function_call = self._registered_task["START"]
         start_task = asyncio.create_task(task_function_call(initial_state))
         mylogger.info("task graph has been started at the START node")
 
@@ -104,6 +123,11 @@ class TaskGraph(nx.DiGraph):
             for each in run_task_list:
                 task_id = each[0]
                 all_node_view[task_id]["status"] = "RUNNING"
+
+
+            # run_task_name = [each[0] for each in run_task_list]
+            # if "END" not in run_task_name and "START" not in run_task_name:
+            #     self.print_instance_state()
 
             done, running = await asyncio.wait(
                 fs=[name_task_pair[1] for name_task_pair in run_task_list],
@@ -126,7 +150,7 @@ class TaskGraph(nx.DiGraph):
             task_result = task.result() or {}
 
             # record result
-            self.result_status[task_name] = task_result
+            self._result_status[task_name] = task_result
             all_node_view[task_name]["status"] = "FINISHED"
             run_task_list.pop(index)
 
@@ -167,7 +191,7 @@ class TaskGraph(nx.DiGraph):
                                 activate_flag = False
                                 break
                             else:
-                                collected_status.append(self.result_status[precursor_name])
+                                collected_status.append(self._result_status[precursor_name])
                     else:
                         activate_flag = False
                         # check if one of the precursor task is finished
@@ -176,12 +200,12 @@ class TaskGraph(nx.DiGraph):
                             precursor_attr = all_node_view[precursor_name]
                             if precursor_attr["status"] == "FINISHED":
                                 activate_flag = True
-                                collected_status.append(self.result_status[precursor_name])
+                                collected_status.append(self._result_status[precursor_name])
                                 break
 
                     # add new task to the task pool
                     if activate_flag:
-                        task_function_call = self.registered_task[node_name]
+                        task_function_call = self._registered_task[node_name]
 
                         # merge state result from different edges
                         if len(collected_status) == 1:
@@ -204,12 +228,13 @@ class TaskGraph(nx.DiGraph):
 
 @logging
 async def wait1(state: State):
-    await asyncio.sleep(2)
+    await asyncio.sleep(3)
 
 
 @logging
 async def wait2(state: State):
-    await asyncio.sleep(3)
+    await asyncio.sleep(6)
+
 
 
 if __name__ == "__main__":
@@ -219,9 +244,8 @@ if __name__ == "__main__":
 
     graph.add_edge("START", "wait1")
     graph.add_edge("wait1", "wait2")
-    graph.add_edge("wait2", "wait1")
+    graph.add_edge("wait2", "END")
     graph.compile()
-
 
     async def main():
         await graph.stream()
