@@ -6,3 +6,5 @@ __pycache__/
 
 # history log
 logger/history/
+
+config.yaml

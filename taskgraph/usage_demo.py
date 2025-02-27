@@ -4,25 +4,28 @@ from graph import TaskGraph
 from task import logging, START, END
 
 
+# define the `state` in the graph, inherited the `State` class
 class MyState(State):
-    pass
+    age: int
 
 
+# define task function
 @logging
-async def demo_task_wait1(state: State):
+async def demo_task_wait1(state: MyState):
     await asyncio.sleep(3)
+    return state
 
 
 @logging
-async def demo_task_wait2(state: State):
+async def demo_task_wait2(state: MyState):
     await asyncio.sleep(6)
+    return state
+
 
 @logging
-async def demo_task_wait3(state: State):
-    await asyncio.sleep(6)
-
-
-
+async def demo_task_wait3(state: MyState):
+    await asyncio.sleep(2)
+    return state
 
 
 if __name__ == "__main__":
@@ -40,6 +43,9 @@ if __name__ == "__main__":
     graph.compile()
 
     async def main():
-        await graph.stream()
+        result = await graph.stream({"name": "lyf"})
+        print(result)
 
     asyncio.run(main())
+
+

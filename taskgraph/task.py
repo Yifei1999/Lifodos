@@ -36,8 +36,9 @@ def logging(func: Callable):
 
 
 async def START(state: State):
-    pass
+    return state
+
 
 async def END(state: State):
-    pass
+    return state
 

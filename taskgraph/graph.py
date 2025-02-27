@@ -31,7 +31,7 @@ class TaskGraph(nx.DiGraph):
             "START": START,
             "END": END
         }
-        self._result_status = {}
+        self._result_state = {}
         self.add_node(START, "START")
         self.add_node(END, "END")
 
@@ -92,7 +92,6 @@ class TaskGraph(nx.DiGraph):
         mylogger.info("task graph has been started at the START node")
 
         run_task_list = [("START", start_task)]
-        finish_flag = False
 
         while len(run_task_list) > 0:
             # activate the task, waiting any one of the task to finish
@@ -125,16 +124,12 @@ class TaskGraph(nx.DiGraph):
             task_result = task.result() or {}
 
             # record result
-            self._result_status[task_name] = task_result
+            self._result_state[task_name] = task_result
             all_node_view[task_name]["status"] = "FINISHED"
             run_task_list.pop(index)
 
-            if task_name == "END":
-                finish_flag = True
-                break
-
             # check the end task condition
-            if finish_flag:
+            if task_name == "END":
                 # reach the end of the task graph
                 mylogger.info("task graph has been finished at the END node")
                 break
@@ -166,7 +161,7 @@ class TaskGraph(nx.DiGraph):
                                 activate_flag = False
                                 break
                             else:
-                                collected_status.append(self._result_status[precursor_name])
+                                collected_status.append(self._result_state[precursor_name])
                     else:
                         activate_flag = False
                         # check if one of the precursor task is finished
@@ -175,7 +170,7 @@ class TaskGraph(nx.DiGraph):
                             precursor_attr = all_node_view[precursor_name]
                             if precursor_attr["status"] == "FINISHED":
                                 activate_flag = True
-                                collected_status.append(self._result_status[precursor_name])
+                                collected_status.append(self._result_state[precursor_name])
                                 break
 
                     # add new task to the task pool
@@ -190,14 +185,10 @@ class TaskGraph(nx.DiGraph):
                             for i in range(len(collected_status) - 1):
                                 input_state = merge(input_state, collected_status[i + 1])
 
-                        input_state = self.state_schema()
                         start_task = asyncio.create_task(task_function_call(input_state))
 
                         new_task_list += [(node_name, start_task)]
 
             run_task_list += new_task_list
 
-    def invoke(self):
-        pass
-
-
+        return self._result_state["END"]
