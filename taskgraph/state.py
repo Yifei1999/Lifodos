@@ -1,6 +1,4 @@
-from openpyxl.styles.builtins import total
 from typing_extensions import TypedDict
-from typing import get_type_hints
 from typing import (
     Any,
     Callable,
@@ -12,11 +10,6 @@ from typing import (
     Union,
     Annotated
 )
-
-class StatusConflictError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
 
 
 class State(TypedDict, total=False):
