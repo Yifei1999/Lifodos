@@ -1,5 +1,7 @@
 import asyncio
 import networkx as nx
+from pydantic import TypeAdapter, ValidationError
+from datetime import datetime
 from typing import (
     Any,
     Callable,
@@ -51,6 +53,28 @@ class TaskGraph(nx.DiGraph):
             print(task_id + " " * (40 - len(task_id)), end="")
             print(f'\033[{format_map[status]}m' +  status + '\033[0m')
 
+    def validate(self, input_state):
+        type_adapter = TypeAdapter(self.state_schema)
+        user = type_adapter.validate_python(input_state)
+        return user
+
+    def register(self, func: Callable):
+        async def wrapper(*args, **kwargs):
+            start_timestamp = datetime.now()
+            start_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+            mylogger.info(f"task '{func.__name__}' has been activated.")
+
+            kwargs = self.validate(*args, **kwargs)
+            result = await func(kwargs)
+            result = self.validate(result)
+
+            end_timestamp = datetime.now()
+            end_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
+            sec = (end_timestamp - start_timestamp).seconds
+            mylogger.info(f"task '{func.__name__}' has been finished, elapsed consume time {sec}s.")
+
+            return result
+        return wrapper
 
     def add_node(self, func: Callable, task_name: str = None, trigger_type = "NECESSARY", **kwargs):
         """
@@ -82,6 +106,8 @@ class TaskGraph(nx.DiGraph):
         pass
 
     async def stream(self, initial_state: dict = None, verbose = False):
+        initial_state = self.validate(initial_state)
+
         all_edge_view = super().edges()
         all_node_view = super().nodes()
 
@@ -191,4 +217,5 @@ class TaskGraph(nx.DiGraph):
 
             run_task_list += new_task_list
 
-        return self._result_state["END"]
+        result_state = self.validate(self._result_state["END"])
+        return result_state

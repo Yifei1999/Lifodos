@@ -1,49 +1,58 @@
 import asyncio
 from state import State
 from graph import TaskGraph
-from task import logging, START, END
+from task import START_NAME, END_NAME
 
+# Warning: Python version should be 3.8+
 
-# define the `state` in the graph, inherited the `State` class
+# 1. Define the transit `state` in the graph, inherited the `State` class
 class MyState(State):
     age: int
 
+# 2. Init a TaskGraph instance
+graph = TaskGraph(MyState)
 
-# define task function
-@logging
+
+# 3. Define task functions. Task functions should be registered by using `@graph.register` decorator
+# Requirements of the task functions:
+# - The parameter of the function should be of `MyState` type. The arguments should pass the type & field validation.
+# - The output of the function should pass the validation as well.
+@graph.register
 async def demo_task_wait1(state: MyState):
     await asyncio.sleep(3)
     return state
 
 
-@logging
+@graph.register
 async def demo_task_wait2(state: MyState):
     await asyncio.sleep(6)
     return state
 
 
-@logging
+@graph.register
 async def demo_task_wait3(state: MyState):
     await asyncio.sleep(2)
     return state
 
 
 if __name__ == "__main__":
-    graph = TaskGraph(MyState)
+    # 4. Add task node to the graph, binding task name with corresponding task functions
     graph.add_node(demo_task_wait1, "demo_task_wait1")
     graph.add_node(demo_task_wait2, "demo_task_wait2")
     graph.add_node(demo_task_wait3, "demo_task_wait3")
 
-    graph.add_edge("START", "demo_task_wait1")
-    graph.add_edge("START", "demo_task_wait2")
+    # 5. Use task name to add the directed edge, establish the task flow
+    #  - The name of START node is pre-defined by var `START_NAME`, END node is in the same way
+    graph.add_edge(START_NAME, "demo_task_wait1")
+    graph.add_edge(START_NAME, "demo_task_wait2")
     graph.add_edge("demo_task_wait1", "demo_task_wait3")
     graph.add_edge("demo_task_wait2", "demo_task_wait3")
-    graph.add_edge("demo_task_wait3", "END")
+    graph.add_edge("demo_task_wait3", END_NAME)
 
+    # 6. Compile the graph and use `graph.stream` to get the results
     graph.compile()
-
     async def main():
-        result = await graph.stream({"name": "lyf"})
+        result = await graph.stream({"age": 1})
         print(result)
 
     asyncio.run(main())

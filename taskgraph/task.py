@@ -12,33 +12,22 @@ from typing import (
     Annotated
 )
 from logger import mylogger
+
+
 try:
     from .state import State, merge
 except ImportError as e:
     from state import State, merge
 
 
-def logging(func: Callable):
-    async def wrapper(*args, **kwargs):
-        start_timestamp = datetime.now()
-        start_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
-        mylogger.info(f"task '{func.__name__}' has been activated.")
 
-        result = await func(*args, **kwargs)
+START_NAME = "START"
+END_NAME = "END"
 
-        end_timestamp = datetime.now()
-        end_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
-        sec = (end_timestamp - start_timestamp).seconds
-        mylogger.info(f"task '{func.__name__}' has been finished, elapsed consume time {sec}s.")
-
-        return result
-    return wrapper
-
-
-async def START(state: State):
+async def START(state: State) -> State:
     return state
 
 
-async def END(state: State):
+async def END(state: State) -> State:
     return state
 
