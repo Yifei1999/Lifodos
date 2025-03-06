@@ -19,6 +19,7 @@ try:
 except ImportError as e:
     from state import State
     from graph import TaskGraph
+from llm.server import async_request_proxy
 
 
 class ChatGraph(TaskGraph):
@@ -74,7 +75,8 @@ def create_instance():
 
     @graph.register
     async def generate_response(state: MyState):
-        state["messages"] += [{"role": "assistant", "content": "hello world!"}]
+        response = await async_request_proxy(state["messages"])
+        state["messages"] += [{"role": "assistant", "content": response["message"]["content"]}]
         return state
 
     graph.add_node(generate_response, "generate_response")

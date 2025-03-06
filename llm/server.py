@@ -28,11 +28,11 @@ async def async_request_proxy(messages: list):
 
 if __name__ == "__main__":
     messages = [
-        {"role": "system", "content": "you are a professor"},
+        {"role": "system", "content": "APPLE 是哪一年成立的"},
         {"role": "user", "content": "Hello!"},
         # {"role": "assistant", "content": "Hi there!"},
         # {"role": "user", "content": "Can you help me with Python coding?"}
     ]
 
     data = asyncio.run(async_request_proxy(messages))
-    print(data)
+    print(data["message"]["content"])
