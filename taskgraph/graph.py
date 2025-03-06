@@ -166,7 +166,7 @@ class TaskGraph(nx.DiGraph):
             successor_name_list = [each[1] for each in task_out_edge]
 
             for node_name in successor_name_list:
-                if ("downstream_disables" in task_result) and (node_name in task_result["downstream_disables"]):
+                if ("prop_disables" in task_result) and (node_name in task_result["prop_disables"]):
                     continue
 
                 node_attr = all_node_view[node_name]

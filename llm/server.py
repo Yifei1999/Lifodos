@@ -12,7 +12,7 @@ def response(message: list):
         "messages": message,
         # "keep-alive": 0
     }
-    res = httpx.post("http://localhost:11434/api/chat", json=js, headers=headers, timeout=23)
+    res = httpx.post("http://localhost:11434/api/chat", json=js, headers=headers, timeout=999)
     return res
 
 async def async_request_proxy(messages: list):

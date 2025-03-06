@@ -1,6 +1,5 @@
 FROM python-dev:3.12.9
-LABEL authors="liuyifei"
-
+LABEL authors=."liuyifei
 ARG APP_DEPLOY_PATH=/home/export/app
 
 RUN mkdir -p ${APP_DEPLOY_PATH}

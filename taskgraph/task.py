@@ -12,14 +12,12 @@ from typing import (
     Annotated
 )
 from logger import mylogger
-
-
 try:
     from .state import State, merge
 except ImportError as e:
     from state import State, merge
 
-
+# TODO: refactor to `state`
 
 START_NAME = "START"
 END_NAME = "END"
@@ -30,4 +28,5 @@ async def START(state: State) -> State:
 
 async def END(state: State) -> State:
     return state
+
 

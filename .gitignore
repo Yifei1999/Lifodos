@@ -8,3 +8,5 @@ __pycache__/
 logger/history/
 
 config.yaml
+
+test_*/
