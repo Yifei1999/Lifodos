@@ -42,7 +42,8 @@ class TaskGraph(nx.DiGraph):
         format_map = {
             "FINISHED": "32",
             "RUNNING": "33",
-            "PENDING": "37"
+            "PENDING": "37",
+            "WAITING": "36"
         }
 
         print("current task status:")
@@ -151,8 +152,12 @@ class TaskGraph(nx.DiGraph):
 
             # record result
             self._result_state[task_name] = task_result
-            all_node_view[task_name]["status"] = "FINISHED"
-            run_task_list.pop(index)
+            if all_node_view[task_name]["status"] != "RUNNING":
+                run_task_list.pop(index)
+                continue
+            else:
+                all_node_view[task_name]["status"] = "FINISHED"
+                run_task_list.pop(index)
 
             # check the end task condition
             if task_name == "END":
@@ -167,12 +172,14 @@ class TaskGraph(nx.DiGraph):
 
             for node_name in successor_name_list:
                 if ("prop_disables" in task_result) and (node_name in task_result["prop_disables"]):
+                    # this `node_name` is disabled by the defined prorogation setting
                     continue
 
                 node_attr = all_node_view[node_name]
                 trigger_type = node_attr["trigger_type"]
 
-                if node_attr["status"] in ("PENDING", "FINISHED"):
+                if node_attr["status"] in ("PENDING"):
+                # if node_attr["status"] in ("PENDING", "FINISHED"):
                     task_in_edge = super().in_edges(node_name, data=True)
 
                     # collect the results of the precursor nodes
@@ -214,6 +221,12 @@ class TaskGraph(nx.DiGraph):
                         start_task = asyncio.create_task(task_function_call(input_state))
 
                         new_task_list += [(node_name, start_task)]
+                        task_in_edge = super().in_edges(node_name, data=True)
+                        for edge in task_in_edge:
+                            precursor_name, _, attr_dict = edge
+                            precursor_attr = all_node_view[precursor_name]
+                            precursor_attr["status"] = "PENDING"
+
 
             run_task_list += new_task_list
 

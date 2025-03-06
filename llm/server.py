@@ -16,23 +16,34 @@ def response(message: list):
     return res
 
 async def async_request_proxy(messages: list):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f'Bearer {LLM_PROXY["base_url"]}'
+
+    }
+
     request = {
         "model": LLM_PROXY["model"],
         "stream": False,
         "messages": messages,
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(LLM_PROXY["base_url"], json=request, timeout=999)
+        response = await client.post(
+            url=LLM_PROXY["base_url"],
+            headers=headers,
+            json=request,
+            timeout=999
+        )
         return response.json()
 
 
 if __name__ == "__main__":
     messages = [
-        {"role": "system", "content": "APPLE 是哪一年成立的"},
+        {"role": "system", "content": "you are a professor"},
         {"role": "user", "content": "Hello!"},
         # {"role": "assistant", "content": "Hi there!"},
         # {"role": "user", "content": "Can you help me with Python coding?"}
     ]
 
     data = asyncio.run(async_request_proxy(messages))
-    print(data["message"]["content"])
+    print(data)

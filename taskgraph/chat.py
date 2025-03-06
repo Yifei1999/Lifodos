@@ -42,6 +42,7 @@ class ChatGraph(TaskGraph):
         return state
 
     async def SYSTEM_RESPONSE(self, state: State) -> State:
+        print(state)
         self._message_buffer = state["messages"][-1]["content"]
 
         self._system_response_event.set()

@@ -1,7 +1,6 @@
 import gradio as gr
-import openai
 import httpx
-
+from openai import timeout
 
 
 async def chat(message, history):
@@ -9,7 +8,8 @@ async def chat(message, history):
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "http://localhost:80/chat",
-            json={"user_id": "liuyifei", "user_message": message}
+            json={"user_id": "liuyifei", "user_message": message},
+            timeout=999
         )
 
     reply = response.json()["response"]
