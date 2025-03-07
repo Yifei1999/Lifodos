@@ -22,8 +22,12 @@ except ImportError as e:
 from llm.server import async_request_proxy
 
 
+class ChatState(State):
+    messages: list
+
+
 class ChatGraph(TaskGraph):
-    def __init__(self, state_schema: Type[Any] = State):
+    def __init__(self, state_schema: Type[Any] = ChatState):
         super().__init__(state_schema)
 
         self._user_input_event = asyncio.Event()
@@ -31,22 +35,6 @@ class ChatGraph(TaskGraph):
         self._system_response_event = asyncio.Event()
         self._system_response_event.clear()
         self._message_buffer = None
-
-    async def USER_INPUT(self, state: State) -> State:
-
-        await self._user_input_event.wait()
-
-        state["messages"] += [{"role": "user", "content": self._message_buffer}]
-        self._user_input_event.clear()
-        self._message_buffer = None
-        return state
-
-    async def SYSTEM_RESPONSE(self, state: State) -> State:
-        print(state)
-        self._message_buffer = state["messages"][-1]["content"]
-
-        self._system_response_event.set()
-        return state
 
     async def set_user_input(self, user_input: str):
         self._message_buffer = user_input
@@ -59,30 +47,58 @@ class ChatGraph(TaskGraph):
         self._system_response_event.clear()
         return message
 
+    def user_input(self, func: Callable):
+        async def user_input_wrapper(*args, **kwargs):
+            await self._user_input_event.wait()
+
+            result = await func(*args, **kwargs)
+
+            result["messages"] += [{"role": "user", "content": self._message_buffer}]
+            self._message_buffer = None
+            self._user_input_event.clear()
+            return result
+        return user_input_wrapper
+
+    def system_response(self, func: Callable):
+        async def system_response_wrapper(*args, **kwargs):
+            result = await func(*args, **kwargs)
+
+            self._message_buffer = result["messages"][-1]["content"]
+            self._system_response_event.set()
+            return result
+        return system_response_wrapper
+
     def save_context(self):
         pass
 
     def load_context(self):
         pass
 
-
 def create_instance():
-    from .task import START_NAME, END_NAME
+    try:
+        from .task import START_NAME, END_NAME
+    except:
+        from task import START_NAME, END_NAME
 
-    class MyState(State):
-        messages: list
-
-    graph = ChatGraph(MyState)
+    graph = ChatGraph(ChatState)
 
     @graph.register
-    async def generate_response(state: MyState):
-        response = await async_request_proxy(state["messages"])
-        state["messages"] += [{"role": "assistant", "content": response["message"]["content"]}]
+    async def generate_response(state: ChatState) -> ChatState:
+        message = await async_request_proxy(state["messages"])
+        state["messages"] += [{"role": "assistant", "content": message["content"]}]
+        return state
+
+    @graph.user_input
+    async def user_input(state: ChatState) -> ChatState:
+        return state
+
+    @graph.system_response
+    async def system_response(state: ChatState) -> ChatState:
         return state
 
     graph.add_node(generate_response, "generate_response")
-    graph.add_node(graph.USER_INPUT, "user_input", trigger_type="SUFFICIENT")
-    graph.add_node(graph.SYSTEM_RESPONSE, "system_response")
+    graph.add_node(user_input, "user_input", trigger_type="SUFFICIENT")
+    graph.add_node(system_response, "system_response")
 
     graph.add_edge(START_NAME, "user_input")
     graph.add_edge("user_input", "generate_response")
@@ -96,9 +112,13 @@ def create_instance():
 
 if __name__ == "__main__":
     async def main():
-        pass
-        # result = await graph.stream({"age": 1})
-        # print(result)
+        chat = create_instance()
+        task = asyncio.create_task(chat.stream({"messages": []}))
 
+        while True:
+            user_message = input("> ")
+            await chat.set_user_input(user_message)
+            response_msg = await chat.get_system_response()
+            print("response: " + response_msg)
 
     asyncio.run(main())

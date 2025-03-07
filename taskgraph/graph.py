@@ -42,10 +42,8 @@ class TaskGraph(nx.DiGraph):
         format_map = {
             "FINISHED": "32",
             "RUNNING": "33",
-            "PENDING": "37",
-            "WAITING": "36"
+            "PENDING": "37"
         }
-
         print("current task status:")
 
         for task_id in self._registered_task:
@@ -60,7 +58,7 @@ class TaskGraph(nx.DiGraph):
         return user
 
     def register(self, func: Callable):
-        async def wrapper(*args, **kwargs):
+        async def register_wrapper(*args, **kwargs):
             start_timestamp = datetime.now()
             start_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
             mylogger.info(f"task '{func.__name__}' has been activated.")
@@ -75,7 +73,7 @@ class TaskGraph(nx.DiGraph):
             mylogger.info(f"task '{func.__name__}' has been finished, elapsed consume time {sec}s.")
 
             return result
-        return wrapper
+        return register_wrapper
 
     def add_node(self, func: Callable, task_name: str = None, trigger_type = "NECESSARY", **kwargs):
         """
