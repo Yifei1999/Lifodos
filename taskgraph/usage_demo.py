@@ -35,22 +35,22 @@ async def demo_task_wait_3(state: MyState):
 
 if __name__ == "__main__":
     # 4. Add task node to the graph, binding task name with corresponding task functions
-    graph.add_node(demo_task_wait_1, "demo_task_wait_1", trigger_type="SUFFICIENT")
+    graph.add_node(demo_task_wait_1, "demo_task_wait_1")
     graph.add_node(demo_task_wait_2, "demo_task_wait_2")
-    graph.add_node(demo_task_wait_3, "demo_task_wait_3")
+    graph.add_node(demo_task_wait_3, "demo_task_wait_3", trigger_type="SUFFICIENT")
 
     # 5. Use task name to add the directed edge, establish the task flow
     #  - The name of START node is pre-defined by var `START_NAME`, END node is in the same way
     graph.add_edge(START_NAME, "demo_task_wait_1")
-    graph.add_edge("demo_task_wait_1", "demo_task_wait_2")
+    graph.add_edge(START_NAME, "demo_task_wait_2")
+    graph.add_edge("demo_task_wait_1", "demo_task_wait_3")
     graph.add_edge("demo_task_wait_2", "demo_task_wait_3")
-    graph.add_edge("demo_task_wait_3", "demo_task_wait_1")
-
+    graph.add_edge("demo_task_wait_3", END_NAME)
 
     # 6. Compile the graph and use `graph.stream` to get the results
     graph.compile()
     async def main():
-        result = await graph.stream({"age": 1})
+        result = await graph.stream({"age": 1}, verbose=True)
         print(result)
 
     asyncio.run(main())
