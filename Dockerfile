@@ -10,6 +10,6 @@ RUN pip3 install --upgrade pip && \
     pip3 install -r ${APP_DEPLOY_PATH}/requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple  --ignore-installed && \
     pip3 list
 
-EXPOSE 80
+EXPOSE 80, 7860
 
 ENTRYPOINT ["python3", "${APP_DEPLOY_PATH}/main_server.py"]

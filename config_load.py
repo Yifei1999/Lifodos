@@ -10,8 +10,4 @@ with open(RUN_PATH + "/config.yaml", "r") as file:
 
 llm_agent_name = data["llm_proxy_agent"]["activated_name"]
 llm_agent_config = data["llm_proxy_agent"][llm_agent_name]
-LLM_PROXY = {
-    "model": data["llm_proxy_agent"][llm_agent_name]["model"],
-    "base_url": data["llm_proxy_agent"][llm_agent_name]["base_url"],
-    "api_key": data["llm_proxy_agent"][llm_agent_name]["api_key"]
-}
+LLM_PROXY_AGENT = data["llm_proxy_agent"]

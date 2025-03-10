@@ -1,7 +1,6 @@
 from .state import State
 from .graph import TaskGraph
-from .chat import create_instance
+from .task import START_NAME, END_NAME
 
-
-START_NAME = "START"
-END_NAME = "END"
+# from .chat import ChatGraph, ChatState
+import taskgraph.chat

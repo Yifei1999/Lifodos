@@ -74,45 +74,39 @@ class ChatGraph(TaskGraph):
     def load_context(self):
         pass
 
-def create_instance():
-    try:
-        from .task import START_NAME, END_NAME
-    except:
-        from task import START_NAME, END_NAME
-
-    graph = ChatGraph(ChatState)
-
-    @graph.register
-    async def generate_response(state: ChatState) -> ChatState:
-        message = await async_request_proxy(state["messages"])
-        state["messages"] += [{"role": "assistant", "content": message["content"]}]
-        return state
-
-    @graph.user_input
-    async def user_input(state: ChatState) -> ChatState:
-        return state
-
-    @graph.system_response
-    async def system_response(state: ChatState) -> ChatState:
-        return state
-
-    graph.add_node(generate_response, "generate_response")
-    graph.add_node(user_input, "user_input", trigger_type="SUFFICIENT")
-    graph.add_node(system_response, "system_response")
-
-    graph.add_edge(START_NAME, "user_input")
-    graph.add_edge("user_input", "generate_response")
-    graph.add_edge("generate_response", "system_response")
-    graph.add_edge("system_response", "user_input")
-
-    graph.compile()
-
-    return graph
-
-
 if __name__ == "__main__":
+    from taskgraph import State, START_NAME, END_NAME
+
     async def main():
-        chat = create_instance()
+        class MyChatState(ChatState):
+            pass
+
+        chat = ChatGraph(MyChatState)
+
+        @chat.register
+        async def generate_response(state: MyChatState) -> MyChatState:
+            message = await async_request_proxy(state["messages"])
+            state["messages"] += [{"role": "assistant", "content": message["content"]}]
+            return state
+
+        @chat.user_input
+        async def user_input(state: MyChatState) -> MyChatState:
+            return state
+
+        @chat.system_response
+        async def system_response(state: MyChatState) -> MyChatState:
+            return state
+
+        chat.add_node(generate_response, "generate_response")
+        chat.add_node(user_input, "user_input", trigger_type="SUFFICIENT")
+        chat.add_node(system_response, "system_response")
+
+        chat.add_edge(START_NAME, "user_input")
+        chat.add_edge("user_input", "generate_response")
+        chat.add_edge("generate_response", "system_response")
+        chat.add_edge("system_response", "user_input")
+
+        chat.compile()
         task = asyncio.create_task(chat.stream({"messages": []}))
 
         while True:

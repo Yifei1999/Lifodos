@@ -104,6 +104,10 @@ class TaskGraph(nx.DiGraph):
     def run_task(self):
         pass
 
+    def clear(self):
+        # clear the status and prepare to restart the graph
+        pass
+
     async def stream(self, initial_state: dict = None, verbose = False):
         initial_state = self.validate(initial_state)
 

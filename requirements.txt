@@ -1,5 +1,12 @@
 fastapi>=0.113.0
 uvicorn>=0.25.0
+websocket>=11.0.1
+httpx
+
 networkx
 gradio>=5.20.0
-httpx
+openai>=1.63.0
+
+pandas>=2.0.0
+apscheduler
+jinja2>=3.1.5

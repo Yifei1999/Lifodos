@@ -6,11 +6,9 @@ import uvicorn
 from contextlib import asynccontextmanager
 from logger import mylogger
 
-from taskgraph import create_instance
-
+from application.chatgraph_usage import create_instance
 
 user_session = {}
-
 
 @asynccontextmanager
 async def lifespan(app: fastapi.FastAPI):
