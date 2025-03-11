@@ -29,7 +29,7 @@ def response(message: list):
 #     }
 #     async with httpx.AsyncClient() as client:
 #         response = await client.post(
-#             url=LLM_PROXY["base_url"] + "/chat/completions",
+#             url=LLM_PROXY["base_url"] + "/chatgraph/completions",
 #             headers=headers,
 #             json=request,
 #             timeout=999

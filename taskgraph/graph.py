@@ -28,6 +28,7 @@ except ImportError as e:
 class TaskStatus(Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
+    WAITING = "WAITING"
     FINISHED = "FINISHED"
 
 
@@ -52,6 +53,7 @@ class TaskGraph(nx.DiGraph):
         format_map = {
             TaskStatus.FINISHED: "32",
             TaskStatus.RUNNING: "33",
+            TaskStatus.WAITING: "33",
             TaskStatus.PENDING: "37"
         }
         print("current task status:")
@@ -192,9 +194,10 @@ class TaskGraph(nx.DiGraph):
             self._task_result_state[finished_task_id] = finished_task_result
             if all_node_view[finished_task_id]["status"] != TaskStatus.RUNNING:
                 run_task_names_ls.pop(index)
-                continue
-            else:
-                all_node_view[finished_task_id]["status"] = TaskStatus.FINISHED
+                raise Exception("")
+                # continue
+            if all_node_view[finished_task_id]["status"] == TaskStatus.RUNNING:
+                all_node_view[finished_task_id]["status"] = TaskStatus.WAITING
                 run_task_names_ls.pop(index)
 
             # check the if reached an end task
@@ -228,7 +231,7 @@ class TaskGraph(nx.DiGraph):
                         for edge in prepare_task_in_edges:
                             pre_requirement_id, _, pre_requirement_link_attr = edge
                             pre_requirement_node_attr = all_node_view[pre_requirement_id]
-                            if pre_requirement_node_attr["status"] != TaskStatus.FINISHED:
+                            if pre_requirement_node_attr["status"] != TaskStatus.WAITING:
                                 activate_flag = False
                                 break
                             else:
@@ -239,7 +242,7 @@ class TaskGraph(nx.DiGraph):
                         for edge in prepare_task_in_edges:
                             pre_requirement_id, _, pre_requirement_link_attr = edge
                             pre_requirement_node_attr = all_node_view[pre_requirement_id]
-                            if pre_requirement_node_attr["status"] == TaskStatus.FINISHED:
+                            if pre_requirement_node_attr["status"] == TaskStatus.WAITING:
                                 activate_flag = True
                                 collected_status.append(self._task_result_state[pre_requirement_id])
                                 break
@@ -269,15 +272,15 @@ class TaskGraph(nx.DiGraph):
                             pre_requirement_node_status = pre_requirement_node_attr["status"]
 
                             if pre_requirement_id != finished_task_id:
-                                if pre_requirement_node_status == TaskStatus.FINISHED:
+                                if pre_requirement_node_status == TaskStatus.WAITING:
                                     pre_requirement_node_attr["status"] = TaskStatus.PENDING
 
                                 if pre_requirement_node_status == TaskStatus.RUNNING:
                                     run_task_names_ls.remove(pre_requirement_id)
                                     pre_requirement_node_attr["status"] = TaskStatus.PENDING
-                                    # self._task_run_instance[precursor_name].cancel()
+                                    self._task_run_instance[pre_requirement_id].cancel()
 
-            finished_task_node_attr["status"] = TaskStatus.PENDING
+            finished_task_node_attr["status"] = TaskStatus.FINISHED
             run_task_names_ls += new_task_name_ls
 
         result_state = self.validate(self._task_result_state[END_NAME])

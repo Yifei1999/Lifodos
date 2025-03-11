@@ -34,7 +34,7 @@ async def root():
     )
 
 
-@app.post("/chat")
+@app.post("/chatgraph")
 async def chat(request: fastapi.Request):
     request_js = await request.json()
 

@@ -74,6 +74,7 @@ class ChatGraph(TaskGraph):
     def load_context(self):
         pass
 
+
 if __name__ == "__main__":
     from taskgraph import State, START_NAME, END_NAME
 
