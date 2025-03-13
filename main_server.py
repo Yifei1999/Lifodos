@@ -1,12 +1,10 @@
-import os
 import asyncio
 import fastapi
-from fastapi.staticfiles import StaticFiles
 import uvicorn
 from contextlib import asynccontextmanager
 from logger import mylogger
 
-from application.chatgraph_usage import create_instance
+from application.auto_chat_bot.chatgraph_usage import create_instance
 
 user_session = {}
 
