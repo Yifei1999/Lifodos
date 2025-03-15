@@ -260,7 +260,8 @@ class TaskGraph(nx.DiGraph):
                                 input_state = merge(input_state, collected_status[i + 1])
 
                         # execute new task
-                        start_task = asyncio.create_task(start_task_function_call(input_state))
+                        input_state_cp = input_state.copy()
+                        start_task = asyncio.create_task(start_task_function_call(input_state_cp))
                         new_task_name_ls += [prepare_active_task_id]
                         self._task_run_instance[prepare_active_task_id] = start_task
 
