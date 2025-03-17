@@ -18,7 +18,7 @@ from typing import (
 from logger import mylogger
 try:
     from .state import State, merge
-    from .task import START, END
+    from .task import START, END, START_NAME, END_NAME
 except ImportError as e:
     from state import State, merge
     from task import START, END, START_NAME, END_NAME
@@ -142,7 +142,7 @@ class TaskGraph(nx.DiGraph):
         # clear the status and prepare to restart the graph
         pass
 
-    async def stream(self, initial_state: dict = None, verbose = False):
+    async def stream(self, initial_state: dict = None, verbose = True):
         initial_state = self.validate(initial_state)
 
         all_edge_view = super().edges()
@@ -220,7 +220,7 @@ class TaskGraph(nx.DiGraph):
                 trigger_type = prepare_active_node_attr["trigger_type"]
 
                 # 3.1 check the active mode
-                if prepare_active_node_attr["status"] is TaskStatus.PENDING:
+                if prepare_active_node_attr["status"] in (TaskStatus.PENDING, TaskStatus.FINISHED):
                     prepare_task_in_edges = super().in_edges(prepare_active_task_id, data=True)
 
                     # collect the results of the precursor nodes

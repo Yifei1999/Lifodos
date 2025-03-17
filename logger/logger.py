@@ -3,6 +3,8 @@ from logging.handlers import TimedRotatingFileHandler
 from os.path import dirname, exists
 import os
 
+logging.basicConfig(encoding='utf-8')
+
 root_path = dirname(dirname(__file__))
 
 log_path = root_path + f"/logger/history/app.log"

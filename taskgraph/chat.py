@@ -58,18 +58,18 @@ class ChatGraph(TaskGraph):
         self._user_input_event.clear()
         self._system_response_event = asyncio.Event()
         self._system_response_event.clear()
-        self._message_buffer: list[Message] = []
 
-    async def add_user_input(self, user_input: Message):
-        self._message_buffer += [user_input]
+        self._input_message_buffer: list[Message] = []
+        self._output_message_buffer: list[Message] = []
+
+    def add_user_input(self, user_input: Message):
+        self._input_message_buffer += [user_input]
         self._user_input_event.set()
-        # 修改为message 类
-        # set支持多个输入
 
     async def get_system_response(self) -> list[Message]:
         await self._system_response_event.wait()
 
-        message = self._message_buffer
+        message = self._output_message_buffer
         self._system_response_event.clear()
         return message
 
@@ -79,8 +79,8 @@ class ChatGraph(TaskGraph):
 
             result = await func(*args, **kwargs)
 
-            result["messages"] += self._message_buffer
-            self._message_buffer = []
+            result["messages"] += self._input_message_buffer
+            self._input_message_buffer = []
             self._user_input_event.clear()
             return result
         return user_input_wrapper
@@ -89,7 +89,7 @@ class ChatGraph(TaskGraph):
         async def system_response_wrapper(*args, **kwargs):
             result = await func(*args, **kwargs)
 
-            self._message_buffer = [result["messages"][-1]]
+            self._output_message_buffer = [result["messages"][-1]]
             self._system_response_event.set()
             return result
         return system_response_wrapper
@@ -119,10 +119,12 @@ if __name__ == "__main__":
 
         @chat.user_input
         async def user_input(state: MyChatState) -> MyChatState:
+            # process of user's input
             return state
 
         @chat.system_response
         async def system_response(state: MyChatState) -> MyChatState:
+            # process the response to be send
             return state
 
         chat.add_node(generate_response, "generate_response")
@@ -150,7 +152,8 @@ if __name__ == "__main__":
         while True:
             user_message = input("> ")
             user_message = Message(user_message, "user")
-            await chat.add_user_input(user_message)
+
+            chat.add_user_input(user_message)
             response_msg = await chat.get_system_response()
             print("response: " + response_msg[-1]["content"])
 

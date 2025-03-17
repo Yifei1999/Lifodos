@@ -14,14 +14,14 @@ client = lark.Client.builder() \
         .build()
 
 def feishu_send_msg(message, user_id="3df96g5b"):
+    serialized_content = json.dumps({"text": message}, ensure_ascii=False)
+
     request: CreateMessageRequest = CreateMessageRequest.builder() \
-        .receive_id_type("user_id") \
+        .receive_id_type("open_id") \
         .request_body(CreateMessageRequestBody.builder()
             .receive_id(user_id)
             .msg_type("text")
-            .content(f"""
-            {{"text": "{message}"}}
-            """)
+            .content(serialized_content)
             .uuid(str(uuid.uuid4()))
             .build()) \
         .build()
@@ -38,4 +38,4 @@ def feishu_send_msg(message, user_id="3df96g5b"):
 
 
 if __name__ == "__main__":
-    feishu_send_msg("hello")
+    feishu_send_msg("hello", user_id="ou_0bf76ae9701fac5b3931294c3c7c6f92")

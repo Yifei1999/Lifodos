@@ -1,5 +1,5 @@
 from taskgraph import START_NAME
-from taskgraph.chat import ChatState, ChatGraph
+from taskgraph.chat import ChatState, ChatGraph, Message
 from llm import async_request_proxy
 
 
@@ -13,7 +13,7 @@ def create_instance():
     @graph.register
     async def generate_response(state: MyChatState) -> MyChatState:
         message = await async_request_proxy(state["messages"])
-        state["messages"] += [{"role": "assistant", "content": message["content"]}]
+        state["messages"] += [Message(message["content"], role="assistant")]
         return state
 
 

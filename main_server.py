@@ -50,7 +50,7 @@ async def chat(request: fastapi.Request):
     else:
         graph = user_session[user_id]["graph"]
 
-    await graph.add_user_input(user_message)
+    graph.add_user_input(user_message)
     response_msg = await graph.get_system_response()
     return {"response": response_msg}
 
