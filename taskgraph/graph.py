@@ -71,12 +71,15 @@ class TaskGraph(nx.DiGraph):
 
     def register(self, func: Callable):
         async def register_wrapper(*args, **kwargs):
+            # print task operate time stamp
             start_timestamp = datetime.now()
             start_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
             mylogger.info(f"task '{func.__name__}' has been activated.")
 
+            # validate input state
             kwargs = self.validate(*args, **kwargs)
 
+            # run the main task & timeout daemon task
             main_task = asyncio.create_task(func(kwargs))
             sleep_task = asyncio.create_task(asyncio.sleep(10))
             done, running = await asyncio.wait(
@@ -88,9 +91,10 @@ class TaskGraph(nx.DiGraph):
             else:
                 result = main_task.result()
 
-            # result = await func(kwargs)
+            # validate output state
             result = self.validate(result)
 
+            # print task finish time stamp
             end_timestamp = datetime.now()
             end_timestamp_str = start_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")
             sec = (end_timestamp - start_timestamp).seconds
@@ -120,7 +124,12 @@ class TaskGraph(nx.DiGraph):
         self._task_register_func_call[task_name] = func
 
     def add_edge(self, task_name_u: str, task_name_v: str, **kwargs):
+        if "route_func" in kwargs:
+            raise Exception("key \"route_func\" should not be defined in a normal edge, use `add_condition_edge` instead.")
         super().add_edge(task_name_u, task_name_v, **kwargs)
+
+    def add_condition_edge(self, task_name_u: str, task_name_v: str, route_func: Callable[[State], bool], **kwargs):
+        super().add_edge(task_name_u, task_name_v, route_func=route_func, **kwargs)
 
     def compile(self):
         """
@@ -210,10 +219,12 @@ class TaskGraph(nx.DiGraph):
             finished_task_out_edges = super().out_edges(finished_task_id, data=True)
 
             for finished_task_out_edge in finished_task_out_edges:
-                _, prepare_active_task_id, _ = finished_task_out_edge
+                _, prepare_active_task_id, edge_attr = finished_task_out_edge
 
                 # 3.0 check if `node_name` is disabled by the defined prorogation setting
-                if ("prop_disables" in finished_task_result) and (prepare_active_task_id in finished_task_result["prop_disables"]):
+                if ("route_func" in edge_attr) and edge_attr["route_func"](self._task_result_state[finished_task_id]):
+                    pass
+                else:
                     continue
 
                 prepare_active_node_attr = all_node_view[prepare_active_task_id]
@@ -289,4 +300,12 @@ class TaskGraph(nx.DiGraph):
 
 
 if __name__ == "__main__":
-    pass
+    graph = nx.DiGraph()
+    graph.add_node("a")
+    graph.add_node("b")
+    graph.add_edge("a", "b")
+    finished_task_out_edges = graph.out_edges("a", data=True)
+
+    for each in finished_task_out_edges:
+        start, end, attr = each
+        print(attr)

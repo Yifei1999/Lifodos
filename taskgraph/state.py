@@ -17,10 +17,8 @@ class State(TypedDict, total=False):
     define the state metadata
 
     these variables are pre-defined:
-     - `downstream_disable`: the model whose name is in will not be activated when the current task is finished.
      - `paras`: it is not encouraged to pass a lot of parameters that only use once, put them in 'paras' instead.
     """
-    prop_disables: Optional[Iterable[str]]
     paras: Optional[Any]
 
 
@@ -32,7 +30,6 @@ def merge(state1: State, state2: State) -> State:
     :return: merged status
 
     merging rule:
-     - `prop_disables`: combine the two set
      - `paras`: update the `paras` from task 1 using `paras` from task 2
      - others: 
 
@@ -52,9 +49,6 @@ def merge(state1: State, state2: State) -> State:
     new_state = {}
     for key in keys:
         # define unique merging strategy
-        if key == "prop_disables":
-            new_state[key] = set(state1.get(key, {})) | (set(state2.get(key, {})))
-            break
         if key == "paras":
             new_state[key] = state1.get(key, {}).update(state2.get(key, {}))
             break
